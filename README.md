@@ -1,6 +1,6 @@
 # StreamCart
 
-A microservices e-commerce platform for learning backend fundamentals.
+A microservices e-commerce platform
 
 ## Architecture
 
