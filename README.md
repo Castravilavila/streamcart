@@ -56,3 +56,9 @@ Client (HTTP/WS)
 9. ⬜ Protobuf schemas
 10. ⬜ Prometheus + Grafana metrics
 11. ⬜ Jenkins CI/CD pipeline
+
+we also need:
+A global exception handler to map IllegalArgumentException to proper HTTP codes
+A separate admin endpoint or seeding mechanism, since role is always USER
+Account activation or email verification
+Refresh tokens so users do not have to log in every 24 hours
