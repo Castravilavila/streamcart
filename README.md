@@ -46,9 +46,9 @@ Client (HTTP/WS)
 ## Roadmap
 
 1. ✅ Project skeleton (multi-module Maven, base packages)
-2. ⬜ Docker Compose — spin up all infrastructure locally
-3. ⬜ User Service — register/login, JWT, REST endpoints
-4. ⬜ Product Service — CRUD, MongoDB, Redis caching
+2. ✅ Docker Compose — spin up all infrastructure locally
+3. ✅ User Service — register/login, JWT, REST endpoints
+4. ✅ Product Service — CRUD, MongoDB, Redis caching
 5. ⬜ Order Service — place order, PostgreSQL, Kafka producer
 6. ⬜ Notification Service — RabbitMQ consumer, WebSocket push
 7. ⬜ API Gateway — routing, JWT filter, rate limiting
