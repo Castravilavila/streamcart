@@ -3,6 +3,8 @@ package com.streamcart.user.service;
 import com.streamcart.user.dto.AuthResponse;
 import com.streamcart.user.dto.LoginRequest;
 import com.streamcart.user.dto.RegisterRequest;
+import com.streamcart.user.exception.EmailAlreadyInUseException;
+import com.streamcart.user.exception.InvalidCredentialsException;
 import com.streamcart.user.model.User;
 import com.streamcart.user.repository.UserRepository;
 import com.streamcart.user.security.JwtUtil;
@@ -20,7 +22,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already in use: " + request.getEmail());
+            throw new EmailAlreadyInUseException(request.getEmail());
         }
 
         User user = User.builder()
@@ -38,10 +40,10 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+                .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new InvalidCredentialsException();
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
