@@ -57,8 +57,11 @@ Client (HTTP/WS)
 10. ⬜ Prometheus + Grafana metrics
 11. ⬜ Jenkins CI/CD pipeline
 
-we also need:
-A global exception handler to map IllegalArgumentException to proper HTTP codes
-A separate admin endpoint or seeding mechanism, since role is always USER
-Account activation or email verification
-Refresh tokens so users do not have to log in every 24 hours
+After we finish the core services, we can add:
+-A separate admin endpoint or seeding mechanism, since role is always USER
+-Account activation or email verification
+-Refresh tokens so users do not have to log in every 24 hours
+-Retry and dead-letter queue for failed order messages
+-If the Kafka broker is down or unreachable, the message may fail to send, but OrderService
+ will still return sucessful response, this creates the risk for the dual-write problem. We should
+ implement a transactional outbox patter
