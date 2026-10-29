@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Redis backs the RequestRateLimiter (token bucket per client IP).
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cloud:
+    gateway:
+      # Applied to every route below.
+      # Token bucket: the bucket refills at `replenishRate` tokens/sec and can hold at most
+      # `burstCapacity` tokens. Each request consumes `requestedTokens`. Empty bucket -> 429.
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            redis-rate-limiter.requestedTokens: 1
+            key-resolver: "#{@ipKeyResolver}"
+
+      routes:
+        # Public: register / login. No JWT required here - this is where tokens come from.
+        - id: user-service-auth
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+
+        # Protected: requires a valid Bearer token issued by user-service.
+        - id: product-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/products/**
+          filters:
+            - JwtAuthentication
+
+        - id: order-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - JwtAuthentication
+
+        # WebSocket (STOMP over SockJS) to notification-service.
+        # The gateway upgrades the connection automatically when it sees the Upgrade header.
+        - id: notification-service-ws
+          uri: http://localhost:8084
+          predicates:
+            - Path=/ws/**
+
+# Must match user-service's jwt.secret, otherwise signature verification fails.
+# In production this would come from an environment variable / secret manager, not a file.
+jwt:
+  secret: streamcart-super-secret-key-change-in-production-min-32-chars
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true

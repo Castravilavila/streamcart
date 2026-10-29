@@ -15,10 +15,10 @@
     <artifactId>notification-service</artifactId>
     <name>StreamCart :: Notification Service</name>
     <description>
-        Listens to the RabbitMQ notification queue.
+        Listens to the Kafka "order-placed" topic.
         Sends email notifications and pushes real-time updates via WebSockets.
-        Concepts covered: RabbitMQ (consumer), WebSockets, Messaging Systems,
-        AMQP protocol, stateful connections.
+        Concepts covered: Kafka (consumer), WebSockets, Messaging Systems,
+        stateful connections.
     </description>
 
     <dependencies>
@@ -35,10 +35,10 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-        <!-- RabbitMQ via AMQP -->
+        <!-- Kafka consumer -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-amqp</artifactId>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
         </dependency>
 
         <!-- Email sending (JavaMailSender) -->
@@ -67,8 +67,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.amqp</groupId>
-            <artifactId>spring-rabbit-test</artifactId>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
 
