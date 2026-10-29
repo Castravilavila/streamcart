@@ -32,6 +32,21 @@ Client (HTTP/WS)
 | order-service         | 8083 | PostgreSQL | REST, Kafka, ACID transactions    |
 | notification-service  | 8084 | —          | Kafka consumer, WebSockets, Email |
 
+## API Gateway
+
+All client traffic goes through `http://localhost:8080`. Downstream services are not meant to be called directly.
+
+| Path             | Target               | JWT required |
+|------------------|----------------------|--------------|
+| `/api/auth/**`   | user-service         | No           |
+| `/api/products/**` | product-service    | Yes          |
+| `/api/orders/**` | order-service        | Yes          |
+| `/ws/**`         | notification-service | No (WebSocket) |
+
+- **JWT**: send `Authorization: Bearer <token>`. The gateway verifies the signature with the same secret as user-service and forwards `X-User-Email` / `X-User-Role` headers downstream (client-supplied values for these headers are stripped).
+- **Rate limiting**: Redis-backed token bucket per client IP (10 req/s, burst 20). Exceeding it returns `429`.
+- **Debugging routes**: `GET http://localhost:8080/actuator/gateway/routes`
+
 ## Infrastructure (added later via Docker Compose)
 
 - PostgreSQL
@@ -50,7 +65,7 @@ Client (HTTP/WS)
 4. ✅ Product Service — CRUD, MongoDB, Redis caching
 5. ✅ Order Service — place order, PostgreSQL, Kafka producer
 6. ✅ Notification Service — Kafka consumer (order-placed topic), WebSocket push, simulated email
-7. ⬜ API Gateway — routing, JWT filter, rate limiting
+7. ✅ API Gateway — routing, JWT filter, Redis rate limiting
 8. ⬜ gRPC — User Service exposes gRPC, Order Service calls it
 9. ⬜ Protobuf schemas
 10. ⬜ Prometheus + Grafana metrics
