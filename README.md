@@ -91,3 +91,11 @@ After we finish the core services, we can add:
 -If the Kafka broker is down or unreachable, the message may fail to send, but OrderService
  will still return sucessful response, this creates the risk for the dual-write problem. We should
  implement a transactional outbox patter
+
+One trade-off to know about. Because the gRPC call is inside the @Transactional method, 
+Spring has typically already taken a database connection from the pool when the method starts. 
+That connection stays reserved while waiting for user-service, up to 2 seconds. Under heavy load with a slow user-service, 
+this could use up the connection pool. For a learning project it's fine. A common improvement in real systems is to do the 
+remote check outside the transaction: for example, the controller (or a non-transactional method) calls the check first, 
+then calls a separate @Transactional method that only does database work. 
+The 2-second deadline in UserServiceClient limits the damage, and that's one reason it exists. (We have to transform this in a task)
