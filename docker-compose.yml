@@ -69,8 +69,8 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
 
-  # RabbitMQ for notification-service messaging.
-  # The management UI is available on http://localhost:15672 (guest / guest).
+  # RabbitMQ - currently unused. notification-service consumes Kafka directly (see README).
+  # Kept available for a future exercise. Management UI: http://localhost:15672 (guest / guest).
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: streamcart-rabbitmq

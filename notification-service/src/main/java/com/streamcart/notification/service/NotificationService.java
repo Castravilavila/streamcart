@@ -1,11 +1,13 @@
 package com.streamcart.notification.service;
 
 import com.streamcart.notification.dto.OrderNotification;
-import com.streamcart.notification.event.OrderPlacedEvent;
+import com.streamcart.proto.order.OrderPlacedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -15,15 +17,17 @@ public class NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
 
     public void notifyOrderPlaced(OrderPlacedEvent event) {
+        BigDecimal totalAmount = new BigDecimal(event.getTotalAmount());
+
         // Real SMTP credentials aren't configured for this learning project, so we
         // log what would be sent instead of calling a real JavaMailSender.
         log.info("Simulated email to {}: your order #{} for {} has been placed.",
-                event.getCustomerEmail(), event.getOrderId(), event.getTotalAmount());
+                event.getCustomerEmail(), event.getOrderId(), totalAmount);
 
         OrderNotification notification = OrderNotification.builder()
                 .orderId(event.getOrderId())
                 .customerEmail(event.getCustomerEmail())
-                .totalAmount(event.getTotalAmount())
+                .totalAmount(totalAmount)
                 .message("Your order #" + event.getOrderId() + " has been placed successfully.")
                 .build();
 

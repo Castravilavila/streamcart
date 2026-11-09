@@ -5,7 +5,6 @@ import com.streamcart.order.dto.OrderItemRequest;
 import com.streamcart.order.dto.OrderItemResponse;
 import com.streamcart.order.dto.OrderResponse;
 import com.streamcart.order.dto.PlaceOrderRequest;
-import com.streamcart.order.event.OrderPlacedEvent;
 import com.streamcart.order.exception.OrderNotFoundException;
 import com.streamcart.order.messaging.OrderEventProducer;
 import com.streamcart.order.model.Order;
@@ -59,14 +58,7 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
 
-        orderEventProducer.publishOrderPlaced(
-                OrderPlacedEvent.builder()
-                        .orderId(saved.getId())
-                        .customerEmail(saved.getCustomerEmail())
-                        .totalAmount(saved.getTotalAmount())
-                        .createdAt(saved.getCreatedAt())
-                        .build()
-        );
+        orderEventProducer.publishOrderPlaced(saved);
 
         return toResponse(saved);
     }

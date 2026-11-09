@@ -41,6 +41,12 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
+        <!-- Shared Protobuf schemas: OrderPlacedEvent is defined once in streamcart-proto -->
+        <dependency>
+            <groupId>com.streamcart</groupId>
+            <artifactId>streamcart-proto</artifactId>
+        </dependency>
+
         <!-- Email sending (JavaMailSender) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

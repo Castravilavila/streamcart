@@ -18,7 +18,7 @@ Client (HTTP/WS)
      └──────── gRPC :9091  GetUserByEmail (Protobuf) ───┘    |
                                                              |
                                                           [Kafka]
-                                                  order-placed topic
+                                             order-placed topic (Protobuf)
                                                         |
                                            [notification-service] :8084
                                              Kafka consumer · WebSocket · email
@@ -31,9 +31,9 @@ Client (HTTP/WS)
 | api-gateway           | 8080 | —          | Reverse proxy, rate limit, JWT    |
 | user-service          | 8081 | PostgreSQL | REST, gRPC, JWT, Security         |
 | product-service       | 8082 | MongoDB    | REST, Redis cache, NoSQL          |
-| order-service         | 8083 | PostgreSQL | REST, Kafka, ACID transactions    |
+| order-service         | 8083 | PostgreSQL | REST, Kafka, gRPC client, ACID    |
 | notification-service  | 8084 | —          | Kafka consumer, WebSockets, Email |
-| streamcart-proto      | —    | —          | Shared .proto contracts + generated gRPC stubs |
+| streamcart-proto      | —    | —          | Shared .proto schemas (gRPC + Kafka events) |
 
 ## API Gateway
 
@@ -59,6 +59,18 @@ The contract is `streamcart-proto/src/main/proto/user.proto`; Java classes are g
 - **Client**: `order-service` calls it before saving an order, with a 2s deadline.
 - **Status mapping**: gRPC `NOT_FOUND` -> HTTP `400 Customer not found`; `UNAVAILABLE` / `DEADLINE_EXCEEDED` -> HTTP `503`.
 
+## Kafka messages (Protobuf)
+
+The `order-placed` topic carries Protobuf-encoded `OrderPlacedEvent` messages defined in
+`streamcart-proto/src/main/proto/order_events.proto`. Producer and consumer share the generated class,
+so the schema is the contract - not a JSON shape both sides happen to agree on.
+
+- **Serialization**: Kafka-level `ByteArraySerializer` / `ByteArrayDeserializer`; `toByteArray()` and `parseFrom()` are called in application code so the wire format stays explicit.
+- **Money**: `total_amount` is a decimal **string** (`"1019.97"`). Protobuf has no decimal type; `double` loses precision and integer minor units break for 0- or 3-decimal currencies.
+- **Time**: `created_at` is `google.protobuf.Timestamp`.
+- **Poison pills**: a message that fails `parseFrom()` (e.g. an old JSON message) is logged and skipped so the consumer never gets stuck. Production would send it to a dead-letter topic.
+- **Real-world note**: at scale you'd register schemas in a Schema Registry (Confluent / Apicurio) rather than shipping a shared jar, so producers and consumers can be deployed independently.
+
 ## Infrastructure (added later via Docker Compose)
 
 - PostgreSQL
@@ -79,7 +91,7 @@ The contract is `streamcart-proto/src/main/proto/user.proto`; Java classes are g
 6. ✅ Notification Service — Kafka consumer (order-placed topic), WebSocket push, simulated email
 7. ✅ API Gateway — routing, JWT filter, Redis rate limiting
 8. ✅ gRPC — shared `streamcart-proto` module, User Service exposes gRPC (:9091), Order Service calls it
-9. ⬜ Protobuf as Kafka message format — replace the JSON `order-placed` payload with a Protobuf message
+9. ✅ Protobuf as Kafka message format — `order-placed` payload is now a Protobuf `OrderPlacedEvent`
 10. ⬜ Prometheus + Grafana metrics
 11. ⬜ Jenkins CI/CD pipeline
 

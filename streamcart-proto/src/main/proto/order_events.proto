@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package streamcart.order;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.streamcart.proto.order";
+option java_multiple_files = true;
+option java_outer_classname = "OrderEventsProto";
+
+// Published by order-service to the Kafka topic "order-placed".
+// Consumed by notification-service (and any future consumer).
+//
+// Unlike user.proto this file defines no gRPC service - it is a pure message
+// schema. Protobuf is just a serialization format; gRPC is one transport that
+// happens to use it. Kafka is another.
+message OrderPlacedEvent {
+  int64 order_id = 1;
+  string customer_email = 2;
+
+  // Decimal string, e.g. "1019.97". Protobuf has no decimal type:
+  // double would lose precision and int64 minor units break for currencies
+  // with 0 or 3 decimal places. A string round-trips java.math.BigDecimal exactly.
+  string total_amount = 3;
+
+  google.protobuf.Timestamp created_at = 4;
+}
