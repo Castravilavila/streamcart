@@ -1,10 +1,10 @@
 package com.streamcart.order.service;
 
+import com.streamcart.order.client.UserServiceClient;
 import com.streamcart.order.dto.OrderItemRequest;
 import com.streamcart.order.dto.OrderItemResponse;
 import com.streamcart.order.dto.OrderResponse;
 import com.streamcart.order.dto.PlaceOrderRequest;
-import com.streamcart.order.event.OrderPlacedEvent;
 import com.streamcart.order.exception.OrderNotFoundException;
 import com.streamcart.order.messaging.OrderEventProducer;
 import com.streamcart.order.model.Order;
@@ -25,12 +25,17 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderEventProducer orderEventProducer;
+    private final UserServiceClient userServiceClient;
 
     // @Transactional wraps the whole method in a single DB transaction:
     // if anything fails after items are added, the entire save is rolled back,
     // so we never end up with a half-saved order (ACID - Atomicity).
     @Transactional
     public OrderResponse placeOrder(PlaceOrderRequest request) {
+        // Synchronous gRPC call to user-service. Throws CustomerNotFoundException /
+        // UserServiceUnavailableException, which abort the order before anything is written.
+        userServiceClient.getUserByEmail(request.getCustomerEmail());
+
         Order order = Order.builder()
                 .customerEmail(request.getCustomerEmail())
                 .status(OrderStatus.CREATED)
@@ -53,14 +58,7 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
 
-        orderEventProducer.publishOrderPlaced(
-                OrderPlacedEvent.builder()
-                        .orderId(saved.getId())
-                        .customerEmail(saved.getCustomerEmail())
-                        .totalAmount(saved.getTotalAmount())
-                        .createdAt(saved.getCreatedAt())
-                        .build()
-        );
+        orderEventProducer.publishOrderPlaced(saved);
 
         return toResponse(saved);
     }

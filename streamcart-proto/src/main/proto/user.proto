@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package streamcart.user;
+
+option java_package = "com.streamcart.proto.user";
+option java_multiple_files = true;
+option java_outer_classname = "UserProto";
+
+// Internal contract exposed by user-service and consumed by order-service.
+// Field numbers are the wire identifiers - never reuse or renumber them once
+// a version is deployed; add new fields with new numbers instead.
+service UserService {
+  rpc GetUserByEmail (GetUserByEmailRequest) returns (UserResponse);
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message UserResponse {
+  int64  id    = 1;
+  string email = 2;
+  string name  = 3;
+  string role  = 4;
+}

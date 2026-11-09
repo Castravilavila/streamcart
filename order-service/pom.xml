@@ -49,6 +49,16 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
+        <!-- gRPC client: calls user-service's UserService to validate the customer -->
+        <dependency>
+            <groupId>com.streamcart</groupId>
+            <artifactId>streamcart-proto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-client-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

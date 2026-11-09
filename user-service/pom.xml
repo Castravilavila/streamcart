@@ -70,6 +70,16 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- gRPC server: exposes UserService on a separate Netty port (grpc.server.port) -->
+        <dependency>
+            <groupId>com.streamcart</groupId>
+            <artifactId>streamcart-proto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-server-spring-boot-starter</artifactId>
+        </dependency>
+
         <!-- jjwt: JWT creation and validation -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

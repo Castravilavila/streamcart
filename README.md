@@ -13,10 +13,12 @@ Client (HTTP/WS)
   |                     |                      |
 [user-service]  :8081   [product-service] :8082  [order-service] :8083
  JWT · REST · gRPC       REST · Redis cache       REST · Kafka producer
- PostgreSQL               MongoDB                  PostgreSQL
-                                                        |
-                                                     [Kafka]
-                                                  order-placed topic
+ PostgreSQL               MongoDB                  PostgreSQL · gRPC client
+     ^                                                  |    |
+     └──────── gRPC :9091  GetUserByEmail (Protobuf) ───┘    |
+                                                             |
+                                                          [Kafka]
+                                             order-placed topic (Protobuf)
                                                         |
                                            [notification-service] :8084
                                              Kafka consumer · WebSocket · email
@@ -29,8 +31,9 @@ Client (HTTP/WS)
 | api-gateway           | 8080 | —          | Reverse proxy, rate limit, JWT    |
 | user-service          | 8081 | PostgreSQL | REST, gRPC, JWT, Security         |
 | product-service       | 8082 | MongoDB    | REST, Redis cache, NoSQL          |
-| order-service         | 8083 | PostgreSQL | REST, Kafka, ACID transactions    |
+| order-service         | 8083 | PostgreSQL | REST, Kafka, gRPC client, ACID    |
 | notification-service  | 8084 | —          | Kafka consumer, WebSockets, Email |
+| streamcart-proto      | —    | —          | Shared .proto schemas (gRPC + Kafka events) |
 
 ## API Gateway
 
@@ -46,6 +49,27 @@ All client traffic goes through `http://localhost:8080`. Downstream services are
 - **JWT**: send `Authorization: Bearer <token>`. The gateway verifies the signature with the same secret as user-service and forwards `X-User-Email` / `X-User-Role` headers downstream (client-supplied values for these headers are stripped).
 - **Rate limiting**: Redis-backed token bucket per client IP (10 req/s, burst 20). Exceeding it returns `429`.
 - **Debugging routes**: `GET http://localhost:8080/actuator/gateway/routes`
+
+## Internal gRPC (order-service -> user-service)
+
+The contract is `streamcart-proto/src/main/proto/user.proto`; Java classes are generated at build time
+(`mvn install` on the root is required once so the other modules can see them).
+
+- **Server**: `user-service` exposes `UserService.GetUserByEmail` on port `9091` (plaintext, internal only).
+- **Client**: `order-service` calls it before saving an order, with a 2s deadline.
+- **Status mapping**: gRPC `NOT_FOUND` -> HTTP `400 Customer not found`; `UNAVAILABLE` / `DEADLINE_EXCEEDED` -> HTTP `503`.
+
+## Kafka messages (Protobuf)
+
+The `order-placed` topic carries Protobuf-encoded `OrderPlacedEvent` messages defined in
+`streamcart-proto/src/main/proto/order_events.proto`. Producer and consumer share the generated class,
+so the schema is the contract - not a JSON shape both sides happen to agree on.
+
+- **Serialization**: Kafka-level `ByteArraySerializer` / `ByteArrayDeserializer`; `toByteArray()` and `parseFrom()` are called in application code so the wire format stays explicit.
+- **Money**: `total_amount` is a decimal **string** (`"1019.97"`). Protobuf has no decimal type; `double` loses precision and integer minor units break for 0- or 3-decimal currencies.
+- **Time**: `created_at` is `google.protobuf.Timestamp`.
+- **Poison pills**: a message that fails `parseFrom()` (e.g. an old JSON message) is logged and skipped so the consumer never gets stuck. Production would send it to a dead-letter topic.
+- **Real-world note**: at scale you'd register schemas in a Schema Registry (Confluent / Apicurio) rather than shipping a shared jar, so producers and consumers can be deployed independently.
 
 ## Infrastructure (added later via Docker Compose)
 
@@ -66,8 +90,8 @@ All client traffic goes through `http://localhost:8080`. Downstream services are
 5. ✅ Order Service — place order, PostgreSQL, Kafka producer
 6. ✅ Notification Service — Kafka consumer (order-placed topic), WebSocket push, simulated email
 7. ✅ API Gateway — routing, JWT filter, Redis rate limiting
-8. ⬜ gRPC — User Service exposes gRPC, Order Service calls it
-9. ⬜ Protobuf schemas
+8. ✅ gRPC — shared `streamcart-proto` module, User Service exposes gRPC (:9091), Order Service calls it
+9. ✅ Protobuf as Kafka message format — `order-placed` payload is now a Protobuf `OrderPlacedEvent`
 10. ⬜ Prometheus + Grafana metrics
 11. ⬜ Jenkins CI/CD pipeline
 
@@ -79,3 +103,11 @@ After we finish the core services, we can add:
 -If the Kafka broker is down or unreachable, the message may fail to send, but OrderService
  will still return sucessful response, this creates the risk for the dual-write problem. We should
  implement a transactional outbox patter
+
+One trade-off to know about. Because the gRPC call is inside the @Transactional method, 
+Spring has typically already taken a database connection from the pool when the method starts. 
+That connection stays reserved while waiting for user-service, up to 2 seconds. Under heavy load with a slow user-service, 
+this could use up the connection pool. For a learning project it's fine. A common improvement in real systems is to do the 
+remote check outside the transaction: for example, the controller (or a non-transactional method) calls the check first, 
+then calls a separate @Transactional method that only does database work. 
+The 2-second deadline in UserServiceClient limits the damage, and that's one reason it exists. (We have to transform this in a task)
