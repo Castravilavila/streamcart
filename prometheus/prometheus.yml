@@ -1,0 +1,30 @@
+# Prometheus pulls ("scrapes") metrics - services never push anything.
+# Every `scrape_interval` it GETs <target>/actuator/prometheus and stores the samples.
+#
+# The services run on the host (IntelliJ) while Prometheus runs in Docker, so targets use
+# host.docker.internal, which Docker Desktop resolves to the host machine. If the services
+# move into Compose later, these become e.g. order-service:8083.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: streamcart
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels: { service: api-gateway }
+      - targets: ["host.docker.internal:8081"]
+        labels: { service: user-service }
+      - targets: ["host.docker.internal:8082"]
+        labels: { service: product-service }
+      - targets: ["host.docker.internal:8083"]
+        labels: { service: order-service }
+      - targets: ["host.docker.internal:8084"]
+        labels: { service: notification-service }
+
+  # Prometheus scrapes itself - useful to see it's healthy and how much it's ingesting.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

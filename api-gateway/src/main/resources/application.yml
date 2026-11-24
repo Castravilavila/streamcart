@@ -62,7 +62,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,gateway,prometheus
   endpoint:
     gateway:
       enabled: true
+  metrics:
+    # Added to every metric so a single Grafana dashboard can split by service.
+    tags:
+      application: ${spring.application.name}
+    # Publish histogram buckets (not just count/sum) so Prometheus can compute p95/p99.
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

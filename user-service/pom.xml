@@ -63,6 +63,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Micrometer -> Prometheus: adds /actuator/prometheus in the text format Prometheus scrapes -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Lombok: removes boilerplate getters/setters/constructors -->
         <dependency>
             <groupId>org.projectlombok</groupId>
