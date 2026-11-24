@@ -1,0 +1,13 @@
+# Grafana "provisioning": configuration-as-code loaded at startup, so the datasource
+# exists without anyone clicking through the UI. Reproducible and version-controlled.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # Container-to-container: Grafana reaches Prometheus by its Compose service name.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

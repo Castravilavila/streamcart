@@ -71,6 +71,21 @@ so the schema is the contract - not a JSON shape both sides happen to agree on.
 - **Poison pills**: a message that fails `parseFrom()` (e.g. an old JSON message) is logged and skipped so the consumer never gets stuck. Production would send it to a dead-letter topic.
 - **Real-world note**: at scale you'd register schemas in a Schema Registry (Confluent / Apicurio) rather than shipping a shared jar, so producers and consumers can be deployed independently.
 
+## Observability (Prometheus + Grafana)
+
+Pull model: every service exposes `/actuator/prometheus`; **Prometheus** scrapes it every 15s; **Grafana** queries Prometheus.
+
+| Tool       | URL                     | Notes                                              |
+|------------|-------------------------|----------------------------------------------------|
+| Prometheus | http://localhost:9090   | Status -> Targets shows which services are reachable |
+| Grafana    | http://localhost:3000   | admin / admin. Dashboard: *StreamCart -> StreamCart Overview* |
+
+- **Config as code**: `prometheus/prometheus.yml` (scrape targets), `grafana/provisioning/` (datasource + dashboard provider), `grafana/dashboards/streamcart.json` (the dashboard). Nothing is configured by hand in a UI.
+- **Common tag**: every metric carries `application=<service name>` so one dashboard splits by service.
+- **Latency percentiles**: `percentiles-histogram` is enabled for `http.server.requests` so PromQL `histogram_quantile()` can compute p95.
+- **Business metrics**: `order-service` publishes `orders_placed_total` and `orders_amount_currency_*` from `OrderMetrics`. Infra metrics say the system is healthy; business metrics say it is useful.
+- **Free metrics**: HTTP, JVM, Kafka client, Spring Cloud Gateway per-route (`spring_cloud_gateway_requests_*`), gRPC server (`grpc_server_processing_duration_*`).
+
 ## Infrastructure (added later via Docker Compose)
 
 - PostgreSQL
@@ -92,7 +107,7 @@ so the schema is the contract - not a JSON shape both sides happen to agree on.
 7. ✅ API Gateway — routing, JWT filter, Redis rate limiting
 8. ✅ gRPC — shared `streamcart-proto` module, User Service exposes gRPC (:9091), Order Service calls it
 9. ✅ Protobuf as Kafka message format — `order-placed` payload is now a Protobuf `OrderPlacedEvent`
-10. ⬜ Prometheus + Grafana metrics
+10. ✅ Prometheus + Grafana — `/actuator/prometheus` on every service, provisioned Grafana dashboard, custom order metrics
 11. ⬜ Jenkins CI/CD pipeline
 
 After we finish the core services, we can add:

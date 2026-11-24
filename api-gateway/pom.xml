@@ -35,6 +35,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Micrometer -> Prometheus: adds /actuator/prometheus in the text format Prometheus scrapes -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Reactive Redis: backing store for the token-bucket RequestRateLimiter filter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -7,6 +7,7 @@ import com.streamcart.order.dto.OrderResponse;
 import com.streamcart.order.dto.PlaceOrderRequest;
 import com.streamcart.order.exception.OrderNotFoundException;
 import com.streamcart.order.messaging.OrderEventProducer;
+import com.streamcart.order.metrics.OrderMetrics;
 import com.streamcart.order.model.Order;
 import com.streamcart.order.model.OrderItem;
 import com.streamcart.order.model.OrderStatus;
@@ -26,6 +27,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderEventProducer orderEventProducer;
     private final UserServiceClient userServiceClient;
+    private final OrderMetrics orderMetrics;
 
     // @Transactional wraps the whole method in a single DB transaction:
     // if anything fails after items are added, the entire save is rolled back,
@@ -58,6 +60,7 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
 
+        orderMetrics.recordOrderPlaced(saved.getTotalAmount());
         orderEventProducer.publishOrderPlaced(saved);
 
         return toResponse(saved);
